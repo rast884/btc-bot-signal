@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BTC Signal">
+<meta name="theme-color" content="#0a0b0e">
+<title>BTC Signal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@600;700;800&display=swap');
+
+:root {
+  --bg:      #0a0b0e;
+  --s1:      #12141a;
+  --s2:      #1a1d26;
+  --s3:      #22263200;
+  --bd:      rgba(255,255,255,.07);
+  --bd2:     rgba(255,255,255,.12);
+  --tx:      #f0f2f8;
+  --tx2:     #7c8499;
+  --tx3:     #3d4259;
+  --green:   #00e676;
+  --green2:  rgba(0,230,118,.12);
+  --green3:  rgba(0,230,118,.25);
+  --red:     #ff3d57;
+  --red2:    rgba(255,61,87,.12);
+  --red3:    rgba(255,61,87,.25);
+  --yellow:  #ffd740;
+  --blue:    #448aff;
+  --blue2:   rgba(68,138,255,.12);
+  --mono:    'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html { height:100%; overscroll-behavior:none; }
+body {
+  font-family: var(--mono);
+  background: var(--bg);
+  color: var(--tx);
+  min-height: 100%;
+  overflow-x: hidden;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--bd);
+}
+.tb-left { display:flex; align-items:center; gap:10px; }
+.tb-icon {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--blue), #7c4dff);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: white;
+  font-family: var(--display);
+}
+.tb-title { font-family: var(--display); font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
+.tb-sub   { font-size: 10px; color: var(--tx3); font-family: var(--mono); margin-top: 1px; }
+.tb-price-wrap { text-align: right; }
+.tb-price { font-family: var(--display); font-size: 18px; font-weight: 800; letter-spacing: -.5px; }
+.tb-change { font-size: 10px; font-family: var(--mono); }
+.tb-change.up   { color: var(--green); }
+.tb-change.down { color: var(--red);   }
+
+/* ── SCROLL ── */
+.scroll { padding: 12px 14px; display:flex; flex-direction:column; gap:10px;
+          padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px); }
+
+/* ── 5MIN BAR CARD ── */
+.bar-card {
+  border-radius: 16px; border: 1px solid var(--bd);
+  background: var(--s1); overflow: hidden;
+}
+.bar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px 10px;
+}
+.bar-round { font-size: 10px; color: var(--tx3); font-family: var(--mono); }
+.bar-timer {
+  font-family: var(--display); font-size: 28px; font-weight: 800;
+  letter-spacing: -.5px; font-variant-numeric: tabular-nums;
+  transition: color .3s;
+}
+.bar-timer.urgent { color: var(--red); }
+.bar-timer.warn   { color: var(--yellow); }
+.bar-timer.ok     { color: var(--tx); }
+
+.bar-track {
+  height: 6px; background: var(--s2); margin: 0 14px 14px; border-radius: 3px; overflow: hidden;
+}
+.bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(90deg, var(--blue), #7c4dff);
+  transition: width .5s linear;
+  position: relative;
+}
+.bar-fill::after {
+  content: '';
+  position: absolute; right: -1px; top: -3px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: white; box-shadow: 0 0 8px rgba(68,138,255,.8);
+}
+.bar-slots {
+  display: flex; gap: 6px; padding: 0 14px 14px;
+}
+.bar-slot {
+  flex:1; height:3px; border-radius:2px; background: var(--bd);
+  transition: background .3s;
+}
+.bar-slot.done { background: var(--blue); }
+.bar-slot.active { background: var(--yellow); }
+
+/* ── SIGNAL CARD ── */
+.sig-card {
+  border-radius: 16px; border: 1px solid var(--bd);
+  background: var(--s1); overflow: hidden;
+  position: relative;
+}
+.sig-card.bull { border-color: var(--green3); }
+.sig-card.bear { border-color: var(--red3);   }
+.sig-card.weak { border-color: var(--bd);     }
+
+.sig-glow {
+  position: absolute; inset: 0; pointer-events: none; border-radius: 16px;
+  opacity: 0; transition: opacity .4s;
+}
+.sig-card.bull .sig-glow { background: radial-gradient(ellipse at top, rgba(0,230,118,.06) 0%, transparent 70%); opacity:1; }
+.sig-card.bear .sig-glow { background: radial-gradient(ellipse at top, rgba(255,61,87,.06) 0%, transparent 70%); opacity:1; }
+
+.sig-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px 8px; border-bottom: 1px solid var(--bd);
+}
+.sig-label { font-size: 9px; color: var(--tx3); letter-spacing: 1.5px; text-transform: uppercase; }
+.sig-window { font-size: 10px; color: var(--tx2); font-family: var(--mono); }
+
+.sig-body { padding: 14px; }
+
+.sig-direction {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+}
+.sig-arrow {
+  width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; transition: all .3s;
+}
+.sig-arrow.bull { background: var(--green2); color: var(--green); border: 1px solid var(--green3); }
+.sig-arrow.bear { background: var(--red2);   color: var(--red);   border: 1px solid var(--red3); }
+.sig-arrow.wait { background: var(--s2);     color: var(--tx3);   border: 1px solid var(--bd); }
+.sig-arrow.skip { background: var(--s2);     color: var(--yellow); border: 1px solid rgba(255,215,64,.25); }
+
+.sig-dir-text { flex: 1; }
+.sig-dir-main {
+  font-family: var(--display); font-size: 24px; font-weight: 800; letter-spacing: -.5px;
+  line-height: 1;
+}
+.sig-dir-main.bull { color: var(--green); }
+.sig-dir-main.bear { color: var(--red);   }
+.sig-dir-main.wait { color: var(--tx3);   }
+.sig-dir-main.skip { color: var(--yellow); }
+.sig-conf { font-size: 11px; color: var(--tx2); margin-top: 4px; }
+
+/* Confidence bar */
+.conf-bar-wrap { margin-bottom: 14px; }
+.conf-bar-label { display:flex; justify-content:space-between; margin-bottom:5px; font-size:9px; color:var(--tx3); letter-spacing:.8px; text-transform:uppercase; }
+.conf-bar-track { height:4px; background:var(--s2); border-radius:2px; overflow:hidden; }
+.conf-bar-fill  { height:100%; border-radius:2px; transition:width .4s ease, background .4s; }
+
+/* Score bar — up vs down */
+.score-bar-wrap { margin-bottom: 14px; }
+.score-label { font-size:9px; color:var(--tx3); letter-spacing:.8px; text-transform:uppercase; margin-bottom:5px; }
+.score-track {
+  height: 6px; background: var(--s2); border-radius:3px; overflow:hidden; position:relative;
+  display:flex;
+}
+.score-bull { height:100%; border-radius:3px 0 0 3px; background:var(--green); transition:width .4s; }
+.score-bear { height:100%; border-radius:0 3px 3px 0; background:var(--red);   transition:width .4s; }
+.score-labels { display:flex; justify-content:space-between; margin-top:4px; font-size:9px; }
+.score-labels .bull { color: var(--green); }
+.score-labels .bear { color: var(--red);   }
+
+/* Signals tags */
+.sig-tags { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:12px; }
+.tag {
+  font-size: 9px; font-family: var(--mono); font-weight: 600;
+  padding: 3px 8px; border-radius: 5px; letter-spacing: .3px;
+  border: 1px solid transparent;
+}
+.tag.bull { background:var(--green2); color:var(--green); border-color:var(--green3); }
+.tag.bear { background:var(--red2);   color:var(--red);   border-color:var(--red3); }
+.tag.neu  { background:var(--s2);     color:var(--tx3);   border-color:var(--bd); }
+
+/* Reason */
+.sig-reason {
+  font-size: 10px; color: var(--tx2); line-height: 1.7;
+  padding: 10px; background: var(--s2); border-radius: 8px;
+  border: 1px solid var(--bd);
+}
+
+/* Polymarket sentiment */
+.pm-row {
+  display: flex; gap: 8px; margin-bottom: 12px;
+}
+.pm-item {
+  flex: 1; padding: 8px 10px; border-radius: 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.pm-item.up   { background: var(--green2); border: 1px solid var(--green3); }
+.pm-item.down { background: var(--red2);   border: 1px solid var(--red3); }
+.pm-lbl { font-size: 9px; color: var(--tx2); text-transform: uppercase; letter-spacing: .8px; }
+.pm-val { font-family: var(--display); font-size: 20px; font-weight: 800; }
+.pm-val.up   { color: var(--green); }
+.pm-val.down { color: var(--red); }
+
+/* Recommendation pill */
+.rec-pill {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 13px 14px; border-radius: 12px; font-family: var(--display);
+  font-size: 14px; font-weight: 800; letter-spacing: .3px;
+  margin-bottom: 2px; border: 1px solid transparent;
+}
+.rec-pill.bull { background:var(--green2); color:var(--green); border-color:var(--green3); animation: recPulse 2s ease-in-out infinite; }
+.rec-pill.bear { background:var(--red2);   color:var(--red);   border-color:var(--red3); animation: recPulseBear 2s ease-in-out infinite; }
+.rec-pill.skip { background:var(--s2);     color:var(--yellow); border-color:rgba(255,215,64,.2); }
+.rec-pill.wait { background:var(--s2);     color:var(--tx3);   border-color:var(--bd); }
+@keyframes recPulse {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 24px rgba(0,230,118,.2); }
+}
+@keyframes recPulseBear {
+  0%,100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 24px rgba(255,61,87,.2); }
+}
+
+/* LOCKED badge for active round */
+.locked-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-family: var(--mono); font-weight: 600;
+  padding: 3px 8px; border-radius: 5px; letter-spacing: .8px;
+  background: rgba(255,215,64,.1); color: var(--yellow);
+  border: 1px solid rgba(255,215,64,.2);
+}
+
+/* Entry price line */
+.entry-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-radius: 8px; margin-bottom: 10px;
+  background: var(--s2); border: 1px solid var(--bd);
+  font-size: 11px;
+}
+.entry-label { color: var(--tx3); }
+.entry-val   { font-family: var(--display); font-weight: 700; font-size: 14px; color: var(--yellow); }
+
+/* Live dot */
+.live-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  animation: livePulse 1.5s ease-in-out infinite; flex-shrink:0;
+}
+@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+/* Updated indicator */
+.updated-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 6px 14px; border-top: 1px solid var(--bd);
+  font-size: 9px; color: var(--tx3);
+}
+.updated-flash { color: var(--blue); transition: color .5s; }
+
+/* Source badge */
+.src-badge {
+  font-size: 9px; padding: 2px 7px; border-radius: 5px;
+  background: var(--blue2); color: var(--blue); border: 1px solid rgba(68,138,255,.2);
+  font-family: var(--mono);
+}
+
+/* Анимация обновления */
+@keyframes flashUpdate {
+  0% { opacity: 1; }
+  30% { opacity: .3; }
+  100% { opacity: 1; }
+}
+.flash { animation: flashUpdate .4s ease; }
+
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-left">
+    <div class="tb-icon">₿</div>
+    <div>
+      <div class="tb-title">BTC Signal</div>
+      <div class="tb-sub">Polymarket · Chainlink</div>
+    </div>
+  </div>
+  <div class="tb-price-wrap">
+    <div class="tb-price" id="tbPrice">$—</div>
+    <div class="tb-change" id="tbChange">—</div>
+  </div>
+</div>
+
+<!-- SCROLL AREA -->
+<div class="scroll">
+
+  <!-- 5MIN BAR CARD -->
+  <div class="bar-card">
+    <div class="bar-header">
+      <div>
+        <div class="bar-round" id="barRound">Раунд —</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:3px;font-family:var(--mono)">До конца раунда</div>
+      </div>
+      <div class="bar-timer ok" id="barTimer">5:00</div>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" id="barFill" style="width:100%"></div>
+    </div>
+    <div class="bar-slots" id="barSlots"></div>
+  </div>
+
+  <!-- CURRENT ROUND SIGNAL -->
+  <div class="sig-card wait" id="curCard">
+    <div class="sig-glow"></div>
+    <div class="sig-header">
+      <div>
+        <div class="sig-label">⚡ Активный раунд</div>
+        <div class="sig-window" id="curWindow">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="locked-badge">🔒 ЗАФИКСИРОВАН</span>
+        <span class="src-badge" id="srcBadge">LIVE</span>
+      </div>
+    </div>
+    <div class="sig-body">
+
+      <!-- WIN/LOSS pill — обновляется каждую секунду -->
+      <div class="rec-pill wait" id="curRec" style="font-size:16px;padding:14px">
+        <span id="curRecIcon">⏳</span>
+        <span id="curRecText">Ожидание данных...</span>
+      </div>
+
+      <!-- Entry price -->
+      <div class="entry-row">
+        <span class="entry-label">Цена входа (зафиксирована)</span>
+        <span class="entry-val" id="curEntryPrice">—</span>
+      </div>
+
+      <!-- Direction -->
+      <div class="sig-direction" style="margin-top:12px">
+        <div class="sig-arrow wait" id="curArrow">⏳</div>
+        <div class="sig-dir-text">
+          <div class="sig-dir-main wait" id="curDir">Ожидание</div>
+          <div class="sig-conf" id="curConf">Подключение к Polymarket...</div>
+        </div>
+      </div>
+
+      <!-- Confidence bar -->
+      <div class="conf-bar-wrap">
+        <div class="conf-bar-label">
+          <span>УВЕРЕННОСТЬ</span>
+          <span id="curConfPct">—</span>
+        </div>
+        <div class="conf-bar-track">
+          <div class="conf-bar-fill" id="curConfBar" style="width:0%;background:var(--tx3)"></div>
+        </div>
+      </div>
+
+      <!-- Polymarket sentiment -->
+      <div class="score-label">POLYMARKET РЫНОК</div>
+      <div class="pm-row" id="curPM">
+        <div class="pm-item up">
+          <div class="pm-lbl">UP</div>
+          <div class="pm-val up" id="curPMUp">—%</div>
+        </div>
+        <div class="pm-item down">
+          <div class="pm-lbl">DOWN</div>
+          <div class="pm-val down" id="curPMDown">—%</div>
+        </div>
+      </div>
+
+      <!-- Score bar -->
+      <div class="score-bar-wrap">
+        <div class="score-label">СИГНАЛЫ (BULL vs BEAR)</div>
+        <div class="score-track">
+          <div class="score-bull" id="curBullBar" style="width:50%"></div>
+          <div class="score-bear" id="curBearBar" style="width:50%"></div>
+        </div>
+        <div class="score-labels">
+          <span class="bull" id="curBullCount">0 бычьих</span>
+          <span class="bear" id="curBearCount">0 медвежьих</span>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="sig-tags" id="curTags"></div>
+
+      <!-- Reason -->
+      <div class="sig-reason" id="curReason">Получаем данные Polymarket и анализируем BTC...</div>
+
+    </div>
+    <div class="updated-row">
+      <span>Обновлено: <span class="updated-flash" id="curUpdated">—</span></span>
+      <span id="curScore" style="color:var(--tx3)">Скор: —</span>
+    </div>
+  </div>
+
+  <!-- NEXT ROUND SIGNAL -->
+  <div class="sig-card wait" id="nextCard">
+    <div class="sig-glow"></div>
+    <div class="sig-header">
+      <div>
+        <div class="sig-label">🔮 Следующий раунд</div>
+        <div class="sig-window" id="nextWindow">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="live-dot"></div>
+        <span style="font-size:9px;color:var(--tx3);font-family:var(--mono)">↻ КАЖДУЮ СЕК</span>
+      </div>
+    </div>
+    <div class="sig-body">
+
+      <div class="rec-pill wait" id="nextRec">
+        <span id="nextRecIcon">🔮</span>
+        <span id="nextRecText">Анализ...</span>
+      </div>
+
+      <!-- Current price as potential entry -->
+      <div class="entry-row">
+        <span class="entry-label">Текущая цена (потенциальный вход)</span>
+        <span class="entry-val" id="nextLivePrice">—</span>
+      </div>
+
+      <div class="sig-direction" style="margin-top:12px">
+        <div class="sig-arrow wait" id="nextArrow">🔮</div>
+        <div class="sig-dir-text">
+          <div class="sig-dir-main wait" id="nextDir">Анализ...</div>
+          <div class="sig-conf" id="nextConf">Прогноз обновляется каждую секунду</div>
+        </div>
+      </div>
+
+      <div class="conf-bar-wrap">
+        <div class="conf-bar-label">
+          <span>УВЕРЕННОСТЬ ПРОГНОЗА</span>
+          <span id="nextConfPct">—</span>
+        </div>
+        <div class="conf-bar-track">
+          <div class="conf-bar-fill" id="nextConfBar" style="width:0%;background:var(--tx3)"></div>
+        </div>
+      </div>
+
+      <div class="score-bar-wrap">
+        <div class="score-label">СИГНАЛЫ</div>
+        <div class="score-track">
+          <div class="score-bull" id="nextBullBar" style="width:50%"></div>
+          <div class="score-bear" id="nextBearBar" style="width:50%"></div>
+        </div>
+        <div class="score-labels">
+          <span class="bull" id="nextBullCount">0 бычьих</span>
+          <span class="bear" id="nextBearCount">0 медвежьих</span>
+        </div>
+      </div>
+
+      <div class="sig-tags" id="nextTags"></div>
+      <div class="sig-reason" id="nextReason">Прогноз на следующий 5-минутный раунд...</div>
+
+    </div>
+    <div class="updated-row">
+      <span>Прогноз: <span class="updated-flash" id="nextUpdated">—</span></span>
+      <span id="nextScore" style="color:var(--tx3)">Скор: —</span>
+    </div>
+  </div>
+
+</div><!-- /scroll -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const ROUND_MS = 5 * 60 * 1000;
+
+// ═══════════════════════════════════════════════════════════
+// ROUND HELPERS
+// ═══════════════════════════════════════════════════════════
+const roundId     = (t) => Math.floor((t || Date.now()) / ROUND_MS) * ROUND_MS;
+const roundRemain = ()  => roundId() + ROUND_MS - Date.now();
+const fmtTime     = (d) => new Date(d).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+const fmtWindow   = (rid) => `${fmtTime(rid)}–${fmtTime(rid + ROUND_MS)}`;
+const fmt0        = (n)  => Math.round(n).toLocaleString('en-US');
+
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let _price      = 0;
+let _priceChange= 0;
+let _priceSource= 'LIVE';
+let _priceBuffer= [];
+let _wsConnected= false;
+let _klines     = [];
+let _pmUp       = 0.5;
+let _pmDown     = 0.5;
+let _pmFetched  = 0;
+let _updateCount  = 0;
+
+// Активный раунд — фиксируется в начале раунда
+let _activeRoundId   = null;  // ID текущего зафиксированного раунда
+let _activeSignal    = null;  // Зафиксированный прогноз
+let _activeEntryPrice = 0;    // Цена входа (в момент фиксации)
+
+// ═══════════════════════════════════════════════════════════
+// PRICE — Polymarket Chainlink WebSocket
+// ═══════════════════════════════════════════════════════════
+function connectWS() {
+  try {
+    const ws = new WebSocket('wss://ws-live-data.polymarket.com');
+    ws.onopen = () => {
+      _wsConnected = true;
+      _priceSource = 'Polymarket ⚡';
+      ws.send(JSON.stringify({
+        action: 'subscribe',
+        subscriptions: [{ topic: 'crypto_prices_chainlink', type: '*', filters: JSON.stringify({ symbol: 'btc/usd' }) }]
+      }));
+    };
+    ws.onmessage = (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.topic === 'crypto_prices_chainlink' && msg.payload?.symbol === 'btc/usd') {
+          const p = parseFloat(msg.payload.value);
+          if (p > 0) {
+            _priceChange = _price > 0 ? ((p - _price) / _price * 100) : 0;
+            _price = p;
+            _priceBuffer.push(p);
+            if (_priceBuffer.length > 600) _priceBuffer.shift();
+            updatePriceUI();
+          }
+        }
+      } catch(e) {}
+    };
+    ws.onclose = () => { _wsConnected = false; setTimeout(connectWS, 3000); };
+    ws.onerror = () => { _wsConnected = false; };
+  } catch(e) { setTimeout(connectWS, 5000); }
+}
+
+async function fetchPriceFallback() {
+  try {
+    const r = await fetch('https://api.bybit.com/v5/market/tickers?category=spot&symbol=BTCUSDT', { signal: AbortSignal.timeout(4000) });
+    const d = await r.json();
+    const t = d.result?.list?.[0];
+    if (t) { _price = parseFloat(t.lastPrice); _priceChange = parseFloat(t.price24hPcnt)*100; _priceSource = 'Bybit'; _priceBuffer.push(_price); updatePriceUI(); }
+  } catch(e) {
+    try {
+      const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', { signal: AbortSignal.timeout(5000) });
+      const d = await r.json();
+      if (d.bitcoin?.usd) { _price = d.bitcoin.usd; _priceChange = d.bitcoin.usd_24h_change||0; _priceSource = 'CoinGecko'; _priceBuffer.push(_price); updatePriceUI(); }
+    } catch(e2) {}
+  }
+}
+
+async function fetchKlines() {
+  // Build from WebSocket buffer first
+  if (_priceBuffer.length >= 30) {
+    const buf = _priceBuffer.slice(-60);
+    const chunk = Math.max(1, Math.floor(buf.length / 12));
+    const c = [];
+    for (let i = 0; i < 12; i++) {
+      const sl = buf.slice(i*chunk, (i+1)*chunk);
+      if (!sl.length) continue;
+      c.push({ o:sl[0], h:Math.max(...sl), l:Math.min(...sl), c:sl[sl.length-1], v:sl.length });
+    }
+    if (c.length >= 5) { _klines = c; return; }
+  }
+  // Fallback: Bybit
+  try {
+    const r = await fetch('https://api.bybit.com/v5/market/kline?category=spot&symbol=BTCUSDT&interval=1&limit=12', { signal: AbortSignal.timeout(5000) });
+    const d = await r.json();
+    const k = (d.result?.list||[]).reverse().map(k=>({ o:+k[1], h:+k[2], l:+k[3], c:+k[4], v:+k[5] }));
+    if (k.length) _klines = k;
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════
+// POLYMARKET SENTIMENT
+// ═══════════════════════════════════════════════════════════
+async function fetchPM() {
+  if (Date.now() - _pmFetched < 30000) return; // every 30s
+  try {
+    const nowSec = Math.floor(Date.now()/1000);
+    const slug   = `btc-updown-5m-${nowSec - (nowSec % 300)}`;
+    const r = await fetch(`https://gamma-api.polymarket.com/events?slug=${slug}`, { signal: AbortSignal.timeout(4000) });
+    if (!r.ok) throw 0;
+    const data = await r.json();
+    const mkt  = data?.[0]?.markets?.[0];
+    if (!mkt) throw 0;
+    const prices = typeof mkt.outcomePrices==='string' ? JSON.parse(mkt.outcomePrices) : mkt.outcomePrices;
+    _pmUp   = parseFloat(prices[0]) || 0.5;
+    _pmDown = parseFloat(prices[1]) || 0.5;
+    _pmFetched = Date.now();
+  } catch(e) {}
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// ADVANCED ANALYSIS MODULE
+// 1. Order Flow  3. Delta Entry  4. Volatility Filter
+// ═══════════════════════════════════════════════════════════════════════
+let _orderFlow  = { bidVol:0, askVol:0, imbalance:0, signal:'neu', score:0, fetched:0 };
+let _volatility = { range:0, avgRange:0, isFlatMarket:false };
+let _deltaEntry = { elapsed:0, priceDelta:0, direction:'none', strong:false, score:0 };
+
+async function fetchOrderFlow() {
+  if (Date.now() - _orderFlow.fetched < 3000) return _orderFlow;
+  try {
+    const r = await fetch(
+      'https://api.bybit.com/v5/market/orderbook?category=spot&symbol=BTCUSDT&limit=25',
+      { signal: AbortSignal.timeout(3000) }
+    );
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    let bidVol=0, askVol=0;
+    for(const [p,q] of (d.result?.b||[])) bidVol+=parseFloat(p)*parseFloat(q);
+    for(const [p,q] of (d.result?.a||[])) askVol+=parseFloat(p)*parseFloat(q);
+    const total=bidVol+askVol, imbalance=total>0?(bidVol-askVol)/total:0;
+    let signal='neu', score=0;
+    if      (imbalance> 0.20){signal='bull';score= 3.5;}
+    else if (imbalance> 0.10){signal='bull';score= 2.0;}
+    else if (imbalance<-0.20){signal='bear';score=-3.5;}
+    else if (imbalance<-0.10){signal='bear';score=-2.0;}
+    _orderFlow={bidVol,askVol,imbalance,signal,score,fetched:Date.now()};
+    return _orderFlow;
+  } catch(e){ return _orderFlow; }
+}
+
+function calcVolatility(priceHistory) {
+  if(!priceHistory||priceHistory.length<10) return{range:0,avgRange:0,isFlatMarket:false};
+  const recent=priceHistory.slice(-60);
+  const range=Math.max(...recent)-Math.min(...recent);
+  const windows=[];
+  for(let i=0;i+60<=priceHistory.length;i+=60){
+    const w=priceHistory.slice(i,i+60);
+    windows.push(Math.max(...w)-Math.min(...w));
+  }
+  const avgRange=windows.length?windows.reduce((a,b)=>a+b,0)/windows.length:range;
+  const isFlatMarket=range<40||(avgRange>0&&range<avgRange*0.30);
+  _volatility={range:parseFloat(range.toFixed(1)),avgRange:parseFloat(avgRange.toFixed(1)),isFlatMarket};
+  return _volatility;
+}
+
+function calcDeltaEntry(priceHistory, roundStartPrice, roundRemainMs) {
+  const ROUND_TOTAL=5*60*1000, elapsed=ROUND_TOTAL-roundRemainMs, elapsedSec=Math.floor(elapsed/1000);
+  if(!priceHistory||priceHistory.length<5||!roundStartPrice) return{elapsed:elapsedSec,priceDelta:0,direction:'none',strong:false,score:0};
+  const curPrice=priceHistory[priceHistory.length-1];
+  const priceDelta=roundStartPrice>0?((curPrice-roundStartPrice)/roundStartPrice*100):0;
+  const absDelta=Math.abs(priceDelta);
+  let direction='none',score=0,strong=false;
+  if(elapsed>=60000&&elapsed<=240000){
+    if      (absDelta>0.08){direction=priceDelta>0?'UP':'DOWN';score=priceDelta>0?3.5:-3.5;strong=true;}
+    else if (absDelta>0.04){direction=priceDelta>0?'UP':'DOWN';score=priceDelta>0?2.0:-2.0;}
+    else if (absDelta>0.02){direction=priceDelta>0?'UP':'DOWN';score=priceDelta>0?1.0:-1.0;}
+  }
+  _deltaEntry={elapsed:elapsedSec,priceDelta:parseFloat(priceDelta.toFixed(4)),direction,strong,score};
+  return _deltaEntry;
+}
+
+// ═══════════════════════════════════════════════════════════
+// AI SIGNAL — runs every second
+// ═══════════════════════════════════════════════════════════
+function analyzeSignal(klines) {
+  if (!klines || klines.length < 3) return null;
+
+  const n=klines.length, c=klines.map(k=>k.c), o=klines.map(k=>k.o),
+        h=klines.map(k=>k.h), l=klines.map(k=>k.l), v=klines.map(k=>k.v);
+  let score=0; const sigs=[];
+
+  // 1. Тренд
+  const rA=(c[n-1]+c[n-2]+c[n-3])/3, eA=(c[0]+c[1]+c[2])/3;
+  if(rA>eA*1.001)      {score+=2.5;sigs.push({l:'Тренд▲',t:'bull'});}
+  else if(rA<eA*0.999) {score-=2.5;sigs.push({l:'Тренд▼',t:'bear'});}
+  else sigs.push({l:'Флет',t:'neu'});
+
+  // 2. Тело свечи
+  const lb=c[n-1]-o[n-1], lr=h[n-1]-l[n-1], br=lr>0?Math.abs(lb)/lr:0;
+  if(lb>0&&br>0.6)      {score+=2;  sigs.push({l:'Bull свеча',t:'bull'});}
+  else if(lb<0&&br>0.6) {score-=2;  sigs.push({l:'Bear свеча',t:'bear'});}
+
+  // 3. Моментум
+  let bR=0,beR=0;
+  for(let i=n-3;i<n;i++){if(c[i]>o[i])bR++;else beR++;}
+  if(bR===3)  {score+=2.5;sigs.push({l:'3×Bull',t:'bull'});}
+  if(beR===3) {score-=2.5;sigs.push({l:'3×Bear',t:'bear'});}
+
+  // 4. Объём
+  const avgV=v.slice(0,-1).reduce((a,b)=>a+b,0)/(n-1);
+  if(v[n-1]>avgV*1.5){
+    const s=lb>0?1.5:-1.5; score+=s;
+    sigs.push({l:`Vol×${(v[n-1]/avgV).toFixed(1)}`,t:lb>0?'bull':'bear'});
+  }
+
+  // 5. Разворот
+  const avgR=h.map((x,i)=>x-l[i]).reduce((a,b)=>a+b,0)/n;
+  if(lr>avgR*2.5){score*=0.35;sigs.push({l:'Разворот⚠',t:'neu'});}
+
+  // 6. RSI
+  const gains=[],losses=[];
+  for(let i=1;i<n;i++){const d=c[i]-c[i-1];if(d>0)gains.push(d);else losses.push(Math.abs(d));}
+  const aG=gains.length?gains.reduce((a,b)=>a+b,0)/gains.length:0;
+  const aL=losses.length?losses.reduce((a,b)=>a+b,0)/losses.length:.001;
+  const rsi=100-100/(1+aG/aL);
+  if(rsi>72)      {score-=2;sigs.push({l:`RSI${rsi.toFixed(0)}OB`,t:'bear'});}
+  else if(rsi<28) {score+=2;sigs.push({l:`RSI${rsi.toFixed(0)}OS`,t:'bull'});}
+  else sigs.push({l:`RSI${rsi.toFixed(0)}`,t:'neu'});
+
+  // 7. Polymarket Sentiment
+  if(_pmUp!==0.5){
+    if(_pmUp>=0.65)      {score+=4;  sigs.push({l:`PM▲${(_pmUp*100).toFixed(0)}%`,t:'bull'});}
+    else if(_pmUp<=0.35) {score-=4;  sigs.push({l:`PM▼${(_pmDown*100).toFixed(0)}%`,t:'bear'});}
+    else if(_pmUp>=0.57) {score+=2;  sigs.push({l:`PM▲${(_pmUp*100).toFixed(0)}%`,t:'bull'});}
+    else if(_pmUp<=0.43) {score-=2;  sigs.push({l:`PM▼${(_pmDown*100).toFixed(0)}%`,t:'bear'});}
+    else sigs.push({l:`PM~50/50`,t:'neu'});
+  }
+
+  // ★ 8. ORDER FLOW
+  if(_orderFlow.score!==0){
+    score+=_orderFlow.score;
+    sigs.push({l:`OF${_orderFlow.score>0?'▲':'▼'}${Math.abs((_orderFlow.imbalance*100).toFixed(0))}%`,t:_orderFlow.signal});
+  }
+
+  // ★ 9. DELTA ENTRY
+  if(_deltaEntry.score!==0){
+    score+=_deltaEntry.score;
+    sigs.push({l:`Δ${_deltaEntry.priceDelta>0?'+':''}${_deltaEntry.priceDelta.toFixed(3)}%(${_deltaEntry.elapsed}s)`,t:_deltaEntry.score>0?'bull':'bear'});
+  }
+
+  // 10. Консенсус
+  const bullC=sigs.filter(s=>s.t==='bull').length;
+  const bearC=sigs.filter(s=>s.t==='bear').length;
+  if(bullC>=4&&bearC===0){score+=2;sigs.push({l:'Консенсус▲',t:'bull'});}
+  if(bearC>=4&&bullC===0){score-=2;sigs.push({l:'Консенсус▼',t:'bear'});}
+
+  // 11. Активность сессии
+  const hourUTC=new Date().getUTCHours();
+  const active=hourUTC>=7&&hourUTC<=21;
+  if(!active){score*=0.4;sigs.push({l:'Ночь⚠',t:'neu'});}
+  else sigs.push({l:'Сессия✓',t:'bull'});
+
+  // ★ 4. VOLATILITY FILTER
+  const vol=calcVolatility(_priceBuffer);
+  if(vol.isFlatMarket){
+    sigs.push({l:`Флет⚠$${vol.range}`,t:'neu'});
+    score*=0.3;
+  }
+
+  const absScore=Math.abs(score);
+  const strong=absScore>=3.5&&!vol.isFlatMarket;
+  const dir=score>=0?'UP':'DOWN';
+  const conf=Math.min(92,Math.max(50,50+absScore*4.2));
+
+  return{dir,conf,score,sigs,bullC,bearC,strong,rsi,vol};
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// UI UPDATES
+// ═══════════════════════════════════════════════════════════
+function updatePriceUI() {
+  const el = document.getElementById('tbPrice');
+  const ch = document.getElementById('tbChange');
+  if(el && _price>0) el.textContent = '$' + fmt0(_price);
+  if(ch) {
+    const up = _priceChange >= 0;
+    ch.textContent = (up?'+':'')+_priceChange.toFixed(3)+'%';
+    ch.className = 'tb-change ' + (up?'up':'down');
+  }
+  const sb = document.getElementById('srcBadge');
+  if(sb) sb.textContent = _priceSource;
+}
+
+function updateBarUI() {
+  const rem  = roundRemain();
+  const secs = Math.max(0, Math.floor(rem / 1000));
+  const mm   = Math.floor(secs/60);
+  const ss   = String(secs%60).padStart(2,'0');
+
+  const timerEl = document.getElementById('barTimer');
+  if(timerEl){
+    timerEl.textContent = `${mm}:${ss}`;
+    timerEl.className = 'bar-timer ' + (secs<30?'urgent':secs<60?'warn':'ok');
+  }
+
+  const fillEl = document.getElementById('barFill');
+  if(fillEl) fillEl.style.width = Math.max(1, rem/ROUND_MS*100) + '%';
+
+  const roundEl = document.getElementById('barRound');
+  if(roundEl) roundEl.textContent = `Раунд ${fmtWindow(roundId())}`;
+
+  // Slot indicators (5 slots = 5 min, each = 1 min)
+  const elapsed  = ROUND_MS - rem;
+  const minsDone = Math.floor(elapsed / 60000);
+  const slotsEl  = document.getElementById('barSlots');
+  if(slotsEl) {
+    slotsEl.innerHTML = '';
+    for(let i=0;i<5;i++){
+      const slot = document.createElement('div');
+      slot.className = 'bar-slot' + (i<minsDone?' done':i===minsDone?' active':'');
+      slotsEl.appendChild(slot);
+    }
+  }
+
+  // Update windows in signal cards
+  const cw = document.getElementById('curWindow');
+  const nw = document.getElementById('nextWindow');
+  if(cw) cw.textContent = fmtWindow(roundId());
+  if(nw) nw.textContent = fmtWindow(roundId() + ROUND_MS);
+}
+
+function renderSignal(prefix, sig) {
+  if(!sig) return;
+
+  const card = document.getElementById(prefix+'Card');
+  const isUp   = sig.dir === 'UP';
+  const cls    = sig.strong ? (isUp?'bull':'bear') : 'weak';
+
+  if(card) card.className = 'sig-card ' + cls;
+
+  // Rec pill
+  const rec     = document.getElementById(prefix+'Rec');
+  const recIcon = document.getElementById(prefix+'RecIcon');
+  const recText = document.getElementById(prefix+'RecText');
+  if(rec){
+    if(!sig.strong){
+      rec.className='rec-pill skip';
+      if(recIcon) recIcon.textContent='⚠';
+      if(recText) recText.textContent='Слабый сигнал — лучше пропустить';
+    } else if(isUp){
+      rec.className='rec-pill bull';
+      if(recIcon) recIcon.textContent='▲';
+      if(recText) recText.textContent='Рекомендация: ВВЕРХ';
+    } else {
+      rec.className='rec-pill bear';
+      if(recIcon) recIcon.textContent='▼';
+      if(recText) recText.textContent='Рекомендация: ВНИЗ';
+    }
+  }
+
+  // Arrow + direction
+  const arrow   = document.getElementById(prefix+'Arrow');
+  const dirEl   = document.getElementById(prefix+'Dir');
+  const confEl  = document.getElementById(prefix+'Conf');
+  const arrowCls= sig.strong?(isUp?'bull':'bear'):(sig.strong===false?'skip':'wait');
+  if(arrow){ arrow.className='sig-arrow '+arrowCls; arrow.textContent=sig.strong?(isUp?'▲':'▼'):'⚠'; }
+  if(dirEl){ dirEl.className='sig-dir-main '+(sig.strong?(isUp?'bull':'bear'):(sig.strong?'':'skip')); dirEl.textContent=sig.strong?(isUp?'ВВЕРХ':'ВНИЗ'):'ПРОПУСК'; }
+  if(confEl) confEl.textContent = `Уверенность ${sig.conf.toFixed(0)}% · Скор ${sig.score.toFixed(1)}`;
+
+  // Conf bar
+  const confPct = document.getElementById(prefix+'ConfPct');
+  const confBar = document.getElementById(prefix+'ConfBar');
+  if(confPct) confPct.textContent = sig.conf.toFixed(0)+'%';
+  if(confBar){
+    confBar.style.width = sig.conf+'%';
+    confBar.style.background = sig.strong?(isUp?'var(--green)':'var(--red)'):'var(--tx3)';
+  }
+
+  // PM
+  const pmUp   = document.getElementById(prefix+'PMUp');
+  const pmDown = document.getElementById(prefix+'PMDown');
+  if(pmUp)   pmUp.textContent   = (_pmUp*100).toFixed(0)+'%';
+  if(pmDown) pmDown.textContent = (_pmDown*100).toFixed(0)+'%';
+
+  // Score bar
+  const total    = Math.max(1, sig.bullC + sig.bearC);
+  const bullPct  = (sig.bullC/total*100).toFixed(0);
+  const bearPct  = (sig.bearC/total*100).toFixed(0);
+  const bullBar  = document.getElementById(prefix+'BullBar');
+  const bearBar  = document.getElementById(prefix+'BearBar');
+  const bullCnt  = document.getElementById(prefix+'BullCount');
+  const bearCnt  = document.getElementById(prefix+'BearCount');
+  if(bullBar) bullBar.style.width = bullPct+'%';
+  if(bearBar) bearBar.style.width = bearPct+'%';
+  if(bullCnt) bullCnt.textContent = sig.bullC+' бычьих';
+  if(bearCnt) bearCnt.textContent = sig.bearC+' медвежьих';
+
+  // Tags
+  const tagsEl = document.getElementById(prefix+'Tags');
+  if(tagsEl) tagsEl.innerHTML = sig.sigs.map(s=>`<div class="tag ${s.t}">${s.l}</div>`).join('');
+
+  // Reason
+  const reasonEl = document.getElementById(prefix+'Reason');
+  const pmStr = _pmUp!==0.5 ? ` | Polymarket UP:${(_pmUp*100).toFixed(0)}% DOWN:${(_pmDown*100).toFixed(0)}%` : '';
+  if(reasonEl) reasonEl.textContent = `RSI:${sig.rsi.toFixed(0)} | Скор:${sig.score.toFixed(1)}${pmStr} | ${sig.bullC}🟢 бычьих / ${sig.bearC}🔴 медвежьих`;
+
+  // Updated time
+  const updEl = document.getElementById(prefix+'Updated');
+  if(updEl){ updEl.textContent = new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); updEl.classList.add('flash'); setTimeout(()=>updEl.classList.remove('flash'),400); }
+
+  // Score
+  const scoreEl = document.getElementById(prefix+'Score');
+  if(scoreEl) scoreEl.textContent = `Скор: ${sig.score.toFixed(2)}`;
+
+  // Live price for next round
+  if(prefix==='next'){
+    const nlp = document.getElementById('nextLivePrice');
+    if(nlp && _price>0) nlp.textContent = '$'+fmt0(_price);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ACTIVE ROUND — фиксируем прогноз в начале раунда
+// ═══════════════════════════════════════════════════════════
+function fixActiveRound() {
+  const rid = roundId();
+  if (_activeRoundId === rid) return;
+
+  // Новый раунд — фиксируем цену и анализ
+  _activeRoundId    = rid;
+  _activeEntryPrice = _price || (_priceBuffer.length>0?_priceBuffer[_priceBuffer.length-1]:0);
+  // При фиксации сбрасываем delta (новый раунд — новая дельта от 0)
+  _deltaEntry = { elapsed:0, priceDelta:0, direction:'none', strong:false, score:0 };
+  _activeSignal = _klines.length >= 3 ? analyzeSignal(_klines) : null;
+  renderActiveCard();
+}
+
+function renderActiveCard() {
+  const sig = _activeSignal;
+  if (!sig || !_activeEntryPrice) return;
+
+  const rid  = _activeRoundId;
+  const isUp = sig.dir === 'UP';
+  const cls  = sig.strong ? (isUp?'bull':'bear') : 'weak';
+  const card = document.getElementById('curCard');
+  if(card) card.className = 'sig-card ' + cls;
+
+  // Rec pill — зафиксированный прогноз
+  const rec     = document.getElementById('curRec');
+  const recIcon = document.getElementById('curRecIcon');
+  const recText = document.getElementById('curRecText');
+  if(rec){
+    if(!sig.strong){
+      rec.className='rec-pill skip';
+      if(recIcon) recIcon.textContent='⚠';
+      if(recText) recText.textContent='Слабый сигнал — пропустить';
+    } else if(isUp){
+      rec.className='rec-pill bull';
+      if(recIcon) recIcon.textContent='▲';
+      if(recText) recText.textContent='Прогноз зафиксирован: ВВЕРХ';
+    } else {
+      rec.className='rec-pill bear';
+      if(recIcon) recIcon.textContent='▼';
+      if(recText) recText.textContent='Прогноз зафиксирован: ВНИЗ';
+    }
+  }
+
+  // Direction
+  const arrow  = document.getElementById('curArrow');
+  const dirEl  = document.getElementById('curDir');
+  const confEl = document.getElementById('curConf');
+  if(arrow){ arrow.className='sig-arrow '+(sig.strong?(isUp?'bull':'bear'):'skip'); arrow.textContent=sig.strong?(isUp?'▲':'▼'):'⚠'; }
+  if(dirEl){ dirEl.className='sig-dir-main '+(sig.strong?(isUp?'bull':'bear'):'skip'); dirEl.textContent=sig.strong?(isUp?'ВВЕРХ':'ВНИЗ'):'ПРОПУСК'; }
+  if(confEl) confEl.textContent=`Уверенность ${sig.conf.toFixed(0)}% · Скор ${sig.score.toFixed(1)}`;
+
+  // Conf bar
+  const confPct = document.getElementById('curConfPct');
+  const confBar = document.getElementById('curConfBar');
+  if(confPct) confPct.textContent = sig.conf.toFixed(0)+'%';
+  if(confBar){ confBar.style.width=sig.conf+'%'; confBar.style.background=sig.strong?(isUp?'var(--green)':'var(--red)'):'var(--tx3)'; }
+
+  // PM
+  const pmUp   = document.getElementById('curPMUp');
+  const pmDown = document.getElementById('curPMDown');
+  if(pmUp)   pmUp.textContent   = (_pmUp*100).toFixed(0)+'%';
+  if(pmDown) pmDown.textContent = (_pmDown*100).toFixed(0)+'%';
+
+  // Score bar
+  const total  = Math.max(1, sig.bullC + sig.bearC);
+  if(document.getElementById('curBullBar')) document.getElementById('curBullBar').style.width=(sig.bullC/total*100)+'%';
+  if(document.getElementById('curBearBar')) document.getElementById('curBearBar').style.width=(sig.bearC/total*100)+'%';
+  if(document.getElementById('curBullCount')) document.getElementById('curBullCount').textContent=sig.bullC+' бычьих';
+  if(document.getElementById('curBearCount')) document.getElementById('curBearCount').textContent=sig.bearC+' медвежьих';
+
+  // Tags
+  const tagsEl = document.getElementById('curTags');
+  if(tagsEl) tagsEl.innerHTML = sig.sigs.map(s=>`<div class="tag ${s.t}">${s.l}</div>`).join('');
+
+  // Entry price element
+  const entryPriceEl = document.getElementById('curEntryPrice');
+  if(entryPriceEl) entryPriceEl.textContent = '$' + fmt0(_activeEntryPrice);
+
+  // Reason
+  const reasonEl = document.getElementById('curReason');
+  const pmStr = _pmUp!==0.5?` | PM▲${(_pmUp*100).toFixed(0)}% ▼${(_pmDown*100).toFixed(0)}%`:'';
+  if(reasonEl) reasonEl.textContent=`RSI:${sig.rsi.toFixed(0)}${pmStr} | ${sig.bullC}🟢 бычьих / ${sig.bearC}🔴 медвежьих`;
+
+  // Score
+  const scoreEl = document.getElementById('curScore');
+  if(scoreEl) scoreEl.textContent=`Скор: ${sig.score.toFixed(2)}`;
+
+  // Время фиксации
+  const updEl = document.getElementById('curUpdated');
+  if(updEl) updEl.textContent='Зафиксирован в '+new Date(rid).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+// ═══════════════════════════════════════════════════════════
+// WIN/LOSS INDICATOR — обновляется каждую секунду
+// ═══════════════════════════════════════════════════════════
+function updateWinLoss() {
+  if(!_activeSignal || !_activeEntryPrice || !_price) return;
+  const sig  = _activeSignal;
+  if(!sig.strong) return;
+
+  const isUp      = sig.dir === 'UP';
+  const priceUpNow= _price >= _activeEntryPrice;
+  const winning   = (isUp && priceUpNow) || (!isUp && !priceUpNow);
+  const diff      = _price - _activeEntryPrice;
+  const diffPct   = ((diff / _activeEntryPrice) * 100).toFixed(3);
+  const diffSign  = diff >= 0 ? '+' : '';
+
+  // Update the rec pill with live win/loss
+  const rec     = document.getElementById('curRec');
+  const recIcon = document.getElementById('curRecIcon');
+  const recText = document.getElementById('curRecText');
+  if(rec){
+    if(winning){
+      rec.className='rec-pill bull';
+      if(recIcon) recIcon.textContent='✓';
+      if(recText) recText.textContent=`Выигрываем · ${diffSign}${diffPct}%`;
+    } else {
+      rec.className='rec-pill bear';
+      if(recIcon) recIcon.textContent='✗';
+      if(recText) recText.textContent=`Проигрываем · ${diffSign}${diffPct}%`;
+    }
+  }
+
+  // Update score label with live price
+  const confEl = document.getElementById('curConf');
+  if(confEl) confEl.textContent = `Прогноз: ${sig.dir==='UP'?'ВВЕРХ':'ВНИЗ'} · Уверенность ${sig.conf.toFixed(0)}%`;
+
+  // Update reason with live diff
+  const curUpdated = document.getElementById('curUpdated');
+  if(curUpdated){
+    const cur = '$'+fmt0(_price);
+    const ent = '$'+fmt0(_activeEntryPrice);
+    curUpdated.textContent = `${ent} → ${cur} (${diffSign}${diffPct}%)`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN LOOP — runs every second
+// ═══════════════════════════════════════════════════════════
+async function tick() {
+  updateBarUI();
+  _updateCount++;
+
+  // Price fallback every 8s if WS not connected
+  if(!_wsConnected && _updateCount % 8 === 0) {
+    await fetchPriceFallback();
+  }
+
+  // Klines every 5s
+  if(_updateCount % 5 === 0) {
+    await fetchKlines();
+  }
+
+  // Order Flow every 3s (сам кэширует)
+  if(_updateCount % 3 === 0) {
+    await fetchOrderFlow();
+  }
+
+  // Polymarket every 30s
+  if(_updateCount % 30 === 0 || _updateCount === 1) {
+    fetchPM();
+  }
+
+  // Delta entry — обновляем каждую секунду
+  const rem = roundId() + ROUND_MS - Date.now();
+  calcDeltaEntry(_priceBuffer, _activeEntryPrice || (_priceBuffer[0] || 0), rem);
+
+  // Volatility — обновляем каждую секунду
+  calcVolatility(_priceBuffer);
+
+  // ── АКТИВНЫЙ РАУНД: фиксируем в начале, обновляем win/loss ──
+  fixActiveRound();
+  updateWinLoss();
+
+  // ── СЛЕДУЮЩИЙ РАУНД: обновляем каждую секунду ──
+  if(_klines.length >= 3) {
+    const nextSig = analyzeSignal(_klines);
+    if(nextSig) renderSignal('next', nextSig);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+(async function init() {
+  connectWS();
+  await fetchPriceFallback();
+  await fetchKlines();
+  fetchPM();
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
